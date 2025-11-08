@@ -2,42 +2,48 @@ import pygame
 
 
 # Константы
-SCREEN_HEIGHT = 600
-SCREEN_WIDHT = 300
+SCREEN_WIDHT = 480
+SCREEN_HEIGHT = 270
 
 BACKGROUND_COLOR = (92, 215, 246)
 
-SQUARE_HEIGHT = 100
-SQUARE_WIDTH = 80
-SQUARE_COLOR = (255, 255, 255)
+SPEED_MOVE_BACKGROUND = 2
 
-CIRCLE_COLOR = "Red"
-CIRCLE_RADIUS = 22
+BG_SOUND_VOLUME = 0.07
 
-MAIN_FONT_SIZE = 30
-
-JAPAN_TEXT_COLOR = (188, 126, 230)
+PLAYER_HEIGHT = 54
+PLAYER_WIDTH = 50
 
 
 pygame.init()
 pygame.display.set_caption("PyGame_Course")
 
-# Если не нужна полоса с кнопкой закрытия окна: дописываем вторым аргументом:
-# pygame.display.set_mode((SCREEN_HEIGHT, SCREEN_WIDHT), flags=pygame.NOFRAME)
+clock = pygame.time.Clock()
 
-screen = pygame.display.set_mode((SCREEN_HEIGHT, SCREEN_WIDHT))
+screen = pygame.display.set_mode((SCREEN_WIDHT, SCREEN_HEIGHT))
 
-# Подгрузка и установка иконки игры
 icon = pygame.image.load("images/icon.png")
 pygame.display.set_icon(icon)
 
-# Создание квадрата, как объекта игры, в несколько строк
-square = pygame.Surface((SQUARE_HEIGHT, SQUARE_WIDTH))
-square.fill(SQUARE_COLOR)
+player_walk_right = [
+    pygame.image.load("images/player_right/player_right1_small.png"),
+    pygame.image.load("images/player_right/player_right2_small.png"),
+    pygame.image.load("images/player_right/player_right3_small.png"),
+    pygame.image.load("images/player_right/player_right4_small.png"),
+]
+player_walk_left = [
+    pygame.image.load("images/player_left/player_left1_small.png"),
+    pygame.image.load("images/player_left/player_left2_small.png"),
+    pygame.image.load("images/player_left/player_left3_small.png"),
+    pygame.image.load("images/player_left/player_left4_small.png"),
+]
 
-# Создание текста
-main_font = pygame.font.Font("fonts/Bold.ttf", MAIN_FONT_SIZE)
-japan_text = main_font.render("Japan", False, JAPAN_TEXT_COLOR)
+bg = pygame.image.load("images/bg.jpg")
+
+# Инициализация и проигрывание фоновой музыки
+bg_sound = pygame.mixer.Sound("sounds/bg_sound.mp3")
+bg_sound.set_volume(BG_SOUND_VOLUME)
+bg_sound.play()
 
 
 def key_control():
@@ -52,23 +58,33 @@ def key_control():
 
 
 def main():
-    screen.fill(BACKGROUND_COLOR)
+    bg_x = 0
+    player_animation_index = 0
 
     while True:
-        screen.blit(square, (SCREEN_HEIGHT // 2, SQUARE_WIDTH // 2))
-        screen.blit(japan_text, (SQUARE_HEIGHT + 200, SQUARE_WIDTH - 80))
+        # Отображение динамического заднего фона
+        screen.blit(bg, (bg_x, 0))
+        screen.blit(bg, (bg_x + SCREEN_WIDHT, 0))
 
-        # Рисуем круг одной* строкой в квадрате
-        pygame.draw.circle(
-            square,
-            CIRCLE_COLOR,
-            (SQUARE_HEIGHT // 2, SQUARE_WIDTH // 2),
-            CIRCLE_RADIUS
+        screen.blit(
+            player_walk_right[player_animation_index],
+            (SCREEN_WIDHT // 2 - PLAYER_WIDTH // 2, 185)
         )
+
+        if player_animation_index == 3:
+            player_animation_index = 0
+        else:
+            player_animation_index += 1
+
+        bg_x += -SPEED_MOVE_BACKGROUND
+        if bg_x == -SCREEN_WIDHT:
+            bg_x = 0
 
         key_control()
 
         pygame.display.update()
+
+        clock.tick(4)
 
 
 if __name__ == "__main__":
