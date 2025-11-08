@@ -12,6 +12,8 @@ BACKGROUND_COLOR = (92, 215, 246)
 
 SPEED_MOVE_BACKGROUND = 1.5
 
+ENEMY_TIMER = 2500
+
 BG_SOUND_VOLUME = 0.07
 
 PLAYER_HEIGHT = 54
@@ -28,24 +30,38 @@ clock = pygame.time.Clock()
 
 screen = pygame.display.set_mode((SCREEN_WIDHT, SCREEN_HEIGHT))
 
-icon = pygame.image.load("images/icon.png")
+icon = pygame.image.load("images/icon.png").convert_alpha()
 pygame.display.set_icon(icon)
 
 player_walk_right = [
-    pygame.image.load("images/player_right/player_right1_small.png"),
-    pygame.image.load("images/player_right/player_right2_small.png"),
-    pygame.image.load("images/player_right/player_right3_small.png"),
-    pygame.image.load("images/player_right/player_right4_small.png"),
+    pygame.image.load(
+        "images/player_right/player_right1_small.png").convert_alpha(),
+    pygame.image.load(
+        "images/player_right/player_right2_small.png").convert_alpha(),
+    pygame.image.load(
+        "images/player_right/player_right3_small.png").convert_alpha(),
+    pygame.image.load(
+        "images/player_right/player_right4_small.png").convert_alpha(),
 ]
 player_walk_left = [
-    pygame.image.load("images/player_left/player_left1_small.png"),
-    pygame.image.load("images/player_left/player_left2_small.png"),
-    pygame.image.load("images/player_left/player_left3_small.png"),
-    pygame.image.load("images/player_left/player_left4_small.png"),
+    pygame.image.load(
+        "images/player_left/player_left1_small.png").convert_alpha(),
+    pygame.image.load(
+        "images/player_left/player_left2_small.png").convert_alpha(),
+    pygame.image.load(
+        "images/player_left/player_left3_small.png").convert_alpha(),
+    pygame.image.load(
+        "images/player_left/player_left4_small.png").convert_alpha(),
 ]
-player_front = pygame.image.load("images/player_front/player_front1_small.png")
+player_front = pygame.image.load(
+    "images/player_front/player_front1_small.png").convert_alpha()
 
-bg = pygame.image.load("images/bg.jpg")
+enemy = pygame.image.load("images/enemy_small.png").convert_alpha()
+
+bg = pygame.image.load("images/bg.jpg").convert()
+
+enemy_timer = pygame.USEREVENT + 1  # +1 - обязательно
+pygame.time.set_timer(enemy_timer, ENEMY_TIMER)
 
 # Инициализация и проигрывание фоновой музыки
 bg_sound = pygame.mixer.Sound("sounds/bg_sound.mp3")
@@ -58,12 +74,6 @@ is_jumping = False
 
 
 def key_control():
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT or (
-                event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-            pygame.quit()
-            raise SystemExit
-
     keys = pygame.key.get_pressed()
 
     action = {
@@ -122,10 +132,14 @@ def main():
     player_y = 185
     player_speed = PLAYER_SPEED
 
+    enemy_list = []
+
     while True:
         # Отображение динамического заднего фона
         screen.blit(bg, (bg_x, 0))
         screen.blit(bg, (bg_x + SCREEN_WIDHT, 0))
+
+        player_rect = player_front.get_rect(topleft=(player_x, player_y))
 
         if player_animation_index == 3:
             player_animation_index = 0
@@ -135,6 +149,14 @@ def main():
         bg_x += -SPEED_MOVE_BACKGROUND
         if bg_x == -SCREEN_WIDHT:
             bg_x = 0
+
+        if enemy_list:
+            for el in enemy_list:
+                screen.blit(enemy, el)
+                el.x -= 10
+
+                if player_rect.colliderect(el):
+                    print("Проиграл :(")
 
         action = key_control()
 
@@ -146,6 +168,17 @@ def main():
         pygame.display.update()
 
         clock.tick(15)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (
+                event.type == pygame.KEYDOWN and
+                event.key == pygame.K_ESCAPE
+            ):
+                pygame.quit()
+                raise SystemExit
+            if event.type == enemy_timer:
+                enemy_list.append(enemy.get_rect(
+                    topleft=(481, SCREEN_WIDHT // 2 - PLAYER_WIDTH // 2 - 25)))
 
 
 if __name__ == "__main__":
