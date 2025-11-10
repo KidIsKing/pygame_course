@@ -13,12 +13,14 @@ SCREEN_LEFT_LIMIT = 20
 LOSE_TEXT_COLOR = (156, 0, 38)  # бардовый
 RESTART_TEXT_COLOR = (7, 130, 31)  # тёмно-зелёный
 RESTART_BACKGROUND_TEXT_COLOR = (85, 230, 114)  # светло-зелёный
+INFO_TEXT_COLOR = (255, 255, 255)  # белый
 
 # Скорость движения заднего фона
 SPEED_MOVE_BACKGROUND = 1.5
 
 # Размер текста
 MAIN_TEXT_SIZE = 40
+BULLET_TEXT_SIZE = 24
 
 # Громкость звуков
 BG_SOUND_VOLUME = 0.07
@@ -105,13 +107,16 @@ lose_sound.set_volume(LOSE_SOUND_VOLUME)
 text = pygame.font.Font("fonts/Bold.ttf", MAIN_TEXT_SIZE)
 lose_text = text.render("Проигрыш!", False, LOSE_TEXT_COLOR)
 restart_text = text.render(
-    "Начать заново", False, RESTART_TEXT_COLOR, RESTART_BACKGROUND_TEXT_COLOR)
+    "Начать заново", True, RESTART_TEXT_COLOR, RESTART_BACKGROUND_TEXT_COLOR)
 restart_text_rect = restart_text.get_rect(
     topleft=(SCREEN_HEIGHT // 2 - 30, SCREEN_WIDHT // 2 - 110))
+
+info_text = pygame.font.Font("fonts/Bold.ttf", BULLET_TEXT_SIZE)
 
 # Глобальные переменные
 is_jumping = False
 jump_count = JUMP_COUNT
+lose_sound_playing = False
 
 
 def key_control():
@@ -121,20 +126,24 @@ def key_control():
     action = {
         "right": keys[pygame.K_d],
         "left": keys[pygame.K_a],
-        "space": keys[pygame.K_SPACE]
+        "jump": keys[pygame.K_SPACE]
     }
 
     return action
 
 
-def reset_game():
+def reset_game(score, best_score):
     """Сброс состояния игры к начальным значениям."""
-    global is_jumping, jump_count
+    global is_jumping, jump_count, lose_sound_playing
     game_status = True
     is_jumping = False
     jump_count = JUMP_COUNT
+    lose_sound_playing = False
+    best_score = max(best_score, score)
+    score = 0
     bg_sound.play(loops=-1)
-    return game_status, PLAYER_START_POS_X, PLAYER_START_POS_Y
+    return (game_status, score, best_score,
+            PLAYER_START_POS_X, PLAYER_START_POS_Y)
 
 
 def move(x, y, speed, pose_player, action):
@@ -152,7 +161,7 @@ def move(x, y, speed, pose_player, action):
     else:
         screen.blit(player_front, (x, y))
 
-    if action["space"] and not is_jumping:
+    if action["jump"] and not is_jumping:
         is_jumping = True
         jump_count = JUMP_COUNT
 
@@ -180,6 +189,11 @@ def jump(y):
 
 def main():
     """Главная функция игры."""
+    global lose_sound_playing
+
+    best_score = 0
+    score = 0
+
     bg_x = 0
     player_animation_index = 0
     enemy_animation_index = 0
@@ -204,6 +218,18 @@ def main():
             if bg_x == -SCREEN_WIDHT:
                 bg_x = 0
 
+            # Обновление количества патрон и очков и их отображение на экране
+            best_score = max(best_score, score)
+            bullet_count_text = info_text.render(
+                f"Патроны: {bullet_count}", True, INFO_TEXT_COLOR)
+            screen.blit(bullet_count_text, (320, 0))
+            score_text = info_text.render(
+                f"Очки: {score}", True, INFO_TEXT_COLOR)
+            screen.blit(score_text, (5, 0))
+            best_score_text = info_text.render(
+                f"Рекорд: {best_score}", True, INFO_TEXT_COLOR)
+            screen.blit(best_score_text, (5, 25))
+
             # Постоянное отслеживание хитбокса игрока
             player_rect = player_front.get_rect(topleft=(player_x, player_y))
 
@@ -224,6 +250,8 @@ def main():
 
                     if el.x < -50:
                         enemy_list.pop(i)
+                        if game_status:
+                            score += 1
 
                     if player_rect.colliderect(el):
                         game_status = False
@@ -257,6 +285,10 @@ def main():
         else:
             bg_sound.stop()
 
+            if not lose_sound_playing:
+                lose_sound.play()
+                lose_sound_playing = True
+
             screen.blit(lose_bg, (-30, -8))
 
             screen.blit(
@@ -271,7 +303,10 @@ def main():
 
             if (restart_text_rect.collidepoint(mouse) and
                     pygame.mouse.get_pressed()[0]):
-                game_status, player_x, player_y = reset_game()
+
+                (game_status, score, best_score,
+                    player_x, player_y) = reset_game(score, best_score)
+
                 bullet_count = BULLET_COUNT
                 enemy_list.clear()
                 bullet_list.clear()
@@ -294,13 +329,23 @@ def main():
             if event.type == enemy_timer:
                 enemy_list.append(enemy_run[3].get_rect(
                     topleft=(481, SCREEN_WIDHT // 2 - PLAYER_WIDTH // 2 - 30)))
+            # Обработка выстрела левой кнопкой мыши (игра активна)
             if (game_status and
-                    event.type == pygame.KEYUP and
-                    event.key == pygame.K_b and
+                    event.type == pygame.MOUSEBUTTONDOWN and
+                    event.button == 1 and  # Левая кнопка мыши
                     bullet_count > 0):
                 bullet_list.append(bullet.get_rect(
                     topleft=(player_x + 70, player_y + 17)))
                 bullet_count -= 1
+
+            # Обработка нажатия на кнопку рестарта (игра неактивна)
+            if (not game_status and
+                    event.type == pygame.MOUSEBUTTONDOWN and
+                    event.button == 1 and  # Левая кнопка мыши
+                    restart_text_rect.collidepoint(pygame.mouse.get_pos())):
+                bullet_count = BULLET_COUNT
+                enemy_list.clear()
+                bullet_list.clear()
 
 
 if __name__ == "__main__":
